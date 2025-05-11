@@ -13,12 +13,13 @@ fn increment(shape: (usize, usize), index: (usize, usize)) -> Option<(usize, usi
     if new_index.0 >= shape.0 { None } else { Some(new_index) }
 }
 
-fn fill_board(board: &Bitmap2D, remaining_pieces: [u32; 7],
+fn fill_board<'a, 'b>(board: &'b Bitmap2D, remaining_pieces: [u32; 7],
               position: (usize, usize),
-              padded_pieces: &Vec<HashMap<(usize, usize), Vec<Bitmap2D>>>) -> bool {
+              padded_pieces: &'a Vec<HashMap<(usize, usize), Vec<Bitmap2D>>>)
+                -> Option<Vec<&'a Bitmap2D>> {
     let next_pos = match increment(board.shape, position) {
         Some(coord) => coord,
-        None => return true
+        None => return Some(vec![]) // not necessarily true ?
     };
     if board.get(position).unwrap_or(false)  {
         return fill_board(board, remaining_pieces, next_pos, padded_pieces);
@@ -31,52 +32,30 @@ fn fill_board(board: &Bitmap2D, remaining_pieces: [u32; 7],
                     let new_board = board.or(variant);
                     let mut new_remaining = remaining_pieces.clone();
                     new_remaining[piece_id] -= 1;
-                    if fill_board(&new_board, new_remaining, next_pos, padded_pieces) {
-                        println!("{}: {} {}", PIECE_ORDER[piece_id],
-                                 position.0, position.1);
-                        return true;
+                    if let Some(mut solution) = fill_board(&new_board, new_remaining,
+                                                       next_pos, padded_pieces) {
+                        solution.push(&variant);
+                        return Some(solution);
                     }
                 }
             }
         }
     }
-    false
+    None
 }
 
 fn main() {
     let board_size = (4,4);
     let board = Bitmap2D { shape: board_size, data: vec![0] };
-    let piece_count: [u32; 7] = [0, 0, 0, 0, 0, 0, 4];
+    let piece_count: [u32; 7] = [0, 2, 0, 0, 0, 0, 2];
 
     let pieces = get_padded_pieces(board_size);
+    let solution = fill_board(&board, piece_count, (0, 0), &pieces);
 
-    println!("{}", fill_board(&board, piece_count, (0, 0), &pieces));
-
-    //let j_piece = Bitmap2D { shape: (3, 2), data: vec![0b010111 << 58] };
-    //println!("{}", j_piece.pad_to((10, 10), (2, 3)).to_string());
-    //println!("{}", j_piece.pad_to((20, 20), (2, 3)).to_string());
-    //println!("{}", j_piece.pad_to((4, 4), (1, 2)).to_string());
-
-    //let pieces = get_standard_pieces();
-    //for (name, piece) in pieces {
-    //    println!("{name} piece");
-    //    for variant in piece.variants {
-    //        println!("{}", variant.bitmap.to_string());
-    //        println!("    ");
-    //    }
-    //}
-
-    //for piece_dic in pieces {
-    //    println!("######");
-    //    for ((posx, posy), variants) in piece_dic {
-    //        println!("**** ({posx}, {posy})");
-    //        for variant in variants {
-    //            println!("{}", variant.to_string());
-    //            println!("--");
-    //        }
-    //    }
-    //}
-    //println!("{pieces:?}");
+    match solution {
+        Some(sol) => println!("Solution:\n{}", Bitmap2D::print_all(sol.into_iter())),
+        None => println!("No solution")
+    }
 }
 
 #[cfg(test)]

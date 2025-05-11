@@ -1,3 +1,4 @@
+use std::iter::Iterator;
 
 #[derive(Debug)]
 pub struct Bitmap1D {
@@ -160,6 +161,22 @@ impl Bitmap2D {
                 .map(|(x,y)| x | y).collect();
         Bitmap2D { shape : self.shape, data: newdata }
     }
+
+    pub fn print_all<'a>(mut bitmap_iter: impl Iterator<Item=&'a Self>) -> String {
+        let mut char_vec = match bitmap_iter.next() {
+            Some(bitmap) => bitmap.to_string().chars().collect::<Vec<char>>(),
+            None => return String::new()
+        };
+            
+        for (idx, bitmap) in bitmap_iter.enumerate() {
+            char_vec = bitmap.to_string()
+                .replace('1', &(idx+2).to_string())
+                .chars().zip(char_vec)
+                .map(|(new, old)| if new != '0' { new } else { old })
+                .collect::<Vec<char>>();
+        }
+        char_vec.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("")
+    }
 }
 
 #[cfg(test)]
@@ -260,6 +277,17 @@ mod tests {
         assert!(padded.intersects(&padded01));
         assert!(padded11.intersects(&padded01));
 
+    }
+
+    #[test]
+    fn print_bitmap_iter() {
+        let j_piece = Bitmap2D { shape: (3, 2), data: vec![0b010111 << 58] };
+        let padded1 = j_piece.pad_to((4, 4), (0,0));
+        //assert_eq!(padded1.to_string(), "0100\n0100\n1100\n0000");
+        let padded2 = j_piece.pad_to((4, 4), (1,2));
+        //assert_eq!(padded1.to_string(), "0000\n0001\n0001\n0011");
+        let added = Bitmap2D::print_all(vec![padded1, padded2].iter());
+        assert_eq!(added, "0100\n0102\n1102\n0022");
     }
     
 }
