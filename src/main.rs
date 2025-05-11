@@ -45,15 +45,18 @@ fn fill_board<'a, 'b>(board: &'b Bitmap2D, remaining_pieces: [u32; 7],
 }
 
 fn main() {
-    let board_size = (4,4);
+    let board_size = (5,8);
     let board = Bitmap2D { shape: board_size, data: vec![0] };
-    let piece_count: [u32; 7] = [0, 2, 0, 0, 0, 0, 2];
+    //let piece_count: [u32; 7] = [2, 4, 2, 0, 1, 1, 0];
+    let piece_count: [u32; 7] = [0, 2, 2, 2, 1, 2, 1];
 
     let pieces = get_padded_pieces(board_size);
     let solution = fill_board(&board, piece_count, (0, 0), &pieces);
 
     match solution {
-        Some(sol) => println!("Solution:\n{}", Bitmap2D::print_all(sol.into_iter())),
+        Some(sol) => {
+            println!("Solution:\n{}", Bitmap2D::print_all(sol.into_iter()));
+        },
         None => println!("No solution")
     }
 }

@@ -170,7 +170,7 @@ impl Bitmap2D {
             
         for (idx, bitmap) in bitmap_iter.enumerate() {
             char_vec = bitmap.to_string()
-                .replace('1', &(idx+2).to_string())
+                .replace('1', &format!("{:0x}", ((idx+2)%16))[..])
                 .chars().zip(char_vec)
                 .map(|(new, old)| if new != '0' { new } else { old })
                 .collect::<Vec<char>>();
