@@ -4,6 +4,8 @@ mod piece;
 use bitmap::Bitmap2D;
 use piece::*;
 use std::collections::HashMap;
+use std::env;
+use std::error::Error;
 
 fn increment(shape: (usize, usize), index: (usize, usize)) -> Option<(usize, usize)> {
     let flat_index = index.0*shape.1 + index.1 + 1;
@@ -44,11 +46,31 @@ fn fill_board<'a, 'b>(board: &'b Bitmap2D, remaining_pieces: [u32; 7],
     None
 }
 
-fn main() {
-    let board_size = (5,8);
+const USAGE_MSG: &str = "Usage: W H PIECES\nExample: 5 8 IIIIJJLLSZ";
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut args = env::args();
+    args.next();
+    let board_size = (args.next().ok_or(USAGE_MSG)?
+                          .parse::<usize>()
+                          .map_err(|_| USAGE_MSG)?,
+                      args.next().ok_or(USAGE_MSG)?
+                          .parse::<usize>()
+                          .map_err(|_| USAGE_MSG)?);
+
     let board = Bitmap2D { shape: board_size, data: vec![0] };
-    //let piece_count: [u32; 7] = [2, 4, 2, 0, 1, 1, 0];
-    let piece_count: [u32; 7] = [0, 2, 2, 2, 1, 2, 1];
+
+    let mut piece_ids: HashMap<char, usize> = HashMap::new();
+    for (idx, piece_name) in PIECE_ORDER.iter().enumerate() {
+        piece_ids.insert(*piece_name, idx);
+    }
+
+    let mut piece_count: [u32; 7] = [0 ; 7];
+    let pieces_str = args.next().ok_or(USAGE_MSG)?;
+    for piece_name in pieces_str.chars() {
+        piece_count[*piece_ids.get(&piece_name)
+            .ok_or(format!("Unrecognized piece name: {}", piece_name))?] += 1;
+    }
 
     let pieces = get_padded_pieces(board_size);
     let solution = fill_board(&board, piece_count, (0, 0), &pieces);
@@ -59,6 +81,7 @@ fn main() {
         },
         None => println!("No solution")
     }
+    Ok (())
 }
 
 #[cfg(test)]
