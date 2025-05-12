@@ -177,6 +177,7 @@ impl Bitmap2D {
         }
         char_vec.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("")
     }
+
 }
 
 #[cfg(test)]

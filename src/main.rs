@@ -77,12 +77,30 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match solution {
         Some(sol) => {
-            println!("Solution:\n{}", Bitmap2D::print_all(sol.into_iter()));
+            println!("Solution:\n{}",
+                     to_ansi(Bitmap2D::print_all(sol.into_iter())));
         },
         None => println!("No solution")
     }
     Ok (())
 }
+
+fn to_ansi(ipt_str: String) -> String {
+    format!("{}\x1b[0m\n",
+        ipt_str.chars().map(|x| {
+            let color = match u32::from_str_radix(&x.to_string(), 16) {
+                Err(_) => return x.to_string(),
+                Ok(col) => col
+            };
+            let code = if color < 8 { 40 + color } else { 92 + color };
+            format!("\x1b[{code}m  ")
+
+        }).collect::<Vec<String>>().join("").replace("\n", "\x1b[0m\n"))
+}
+// TODO add test cases for fill_board
+// Return all solutions (with Vec<Vec<...>> instead of Option<Vec>..
+// Use multithreading to parallelize the search
+// Manage cases where n_pieces != 4*H*W
 
 #[cfg(test)]
 mod tests {
