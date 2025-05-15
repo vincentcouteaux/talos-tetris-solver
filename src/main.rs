@@ -46,7 +46,39 @@ fn fill_board<'a, 'b>(board: &'b Bitmap2D, remaining_pieces: [u32; 7],
     None
 }
 
-const USAGE_MSG: &str = "Usage: W H PIECES\nExample: 5 8 IIIIJJLLSZ";
+fn all_solutions<'a, 'b>(board: &'b Bitmap2D, remaining_pieces: [u32; 7],
+              position: (usize, usize),
+              padded_pieces: &'a Vec<HashMap<(usize, usize), Vec<Bitmap2D>>>)
+                -> Vec<Vec<&'a Bitmap2D>> {
+    let next_pos = match increment(board.shape, position) {
+        Some(coord) => coord,
+        None => return vec![Vec::new()]
+    };
+    if board.get(position).unwrap_or(false)  {
+        return all_solutions(board, remaining_pieces, next_pos, padded_pieces);
+    }
+    let mut solutions = Vec::new();
+    for (piece_id, piece_dict) in padded_pieces.iter().enumerate() {
+        if remaining_pieces[piece_id] == 0 { continue }
+        if let Some(variants) = piece_dict.get(&position) {
+            for variant in variants {
+                if !board.intersects(variant) {
+                    let new_board = board.or(variant);
+                    let mut new_remaining = remaining_pieces.clone();
+                    new_remaining[piece_id] -= 1;
+                    for mut solution in all_solutions(&new_board, new_remaining, next_pos,
+                                                  padded_pieces).into_iter() {
+                        solution.push(&variant);
+                        solutions.push(solution);
+                    }
+                }
+            }
+        }
+    }
+    solutions
+}
+
+const USAGE_MSG: &str = "Usage: W H PIECES [--find-all]\nExample: 5 8 IIIIJJLLSZ";
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args();
@@ -73,16 +105,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let pieces = get_padded_pieces(board_size);
-    let solution = fill_board(&board, piece_count, (0, 0), &pieces);
-
-    match solution {
-        Some(sol) => {
-            println!("Solution:\n{}",
-                     to_ansi(Bitmap2D::print_all(sol.into_iter())));
+    
+    match args.next().as_deref() {
+        Some("--find-all") => {
+            let solutions = all_solutions(&board, piece_count, (0, 0), &pieces);
+            for solution in solutions {
+                 println!("Solution:\n{}",
+                          to_ansi(Bitmap2D::print_all(solution.into_iter())));
+            }
+            Ok (())
         },
-        None => println!("No solution")
+        Some(arg) => {
+            Err(format!("Unrecognized argument: {arg}").into())
+        },
+        _ => {
+            let solution = fill_board(&board, piece_count, (0, 0), &pieces);
+
+            match solution {
+                Some(sol) => {
+                    println!("Solution:\n{}",
+                             to_ansi(Bitmap2D::print_all(sol.into_iter())));
+                },
+                None => println!("No solution")
+            }
+            Ok (())
+        }
     }
-    Ok (())
 }
 
 fn to_ansi(ipt_str: String) -> String {
@@ -98,9 +146,9 @@ fn to_ansi(ipt_str: String) -> String {
         }).collect::<Vec<String>>().join("").replace("\n", "\x1b[0m\n"))
 }
 // TODO add test cases for fill_board
-// Return all solutions (with Vec<Vec<...>> instead of Option<Vec>..
 // Use multithreading to parallelize the search
 // Manage cases where n_pieces != 4*H*W
+// understand why 17 4 IIIIIIIIIIIIIIIII ne trouve pas de solution
 
 #[cfg(test)]
 mod tests {
