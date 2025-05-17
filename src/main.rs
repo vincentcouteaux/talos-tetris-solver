@@ -63,6 +63,8 @@ fn all_solutions<'a, 'b>(board: &'b Bitmap2D, remaining_pieces: [u32; 7],
         if let Some(variants) = piece_dict.get(&position) {
             for variant in variants {
                 if !board.intersects(variant) {
+                    //println!("\n{}",
+                    //         to_ansi(Bitmap2D::print_all(vec![board, variant].into_iter())));
                     let new_board = board.or(variant);
                     let mut new_remaining = remaining_pieces.clone();
                     new_remaining[piece_id] -= 1;
@@ -90,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                           .parse::<usize>()
                           .map_err(|_| USAGE_MSG)?);
 
-    let board = Bitmap2D { shape: board_size, data: vec![0] };
+    let board = Bitmap2D::zeros(board_size);
 
     let mut piece_ids: HashMap<char, usize> = HashMap::new();
     for (idx, piece_name) in PIECE_ORDER.iter().enumerate() {
@@ -145,10 +147,8 @@ fn to_ansi(ipt_str: String) -> String {
 
         }).collect::<Vec<String>>().join("").replace("\n", "\x1b[0m\n"))
 }
-// TODO add test cases for fill_board
-// Use multithreading to parallelize the search
+// TODO Use multithreading to parallelize the search
 // Manage cases where n_pieces != 4*H*W
-// understand why 17 4 IIIIIIIIIIIIIIIII ne trouve pas de solution
 
 #[cfg(test)]
 mod tests {
@@ -160,5 +160,52 @@ mod tests {
         assert_eq!(increment((4, 4), (2, 3)), Some((3,0)));
         assert_eq!(increment((4, 4), (3, 3)), None);
         assert_eq!(increment((0, 0), (3, 3)), None);
+    }
+
+    #[test]
+    fn i_o_pieces() {
+        let board_size = (4, 4);
+        let pieces = get_padded_pieces(board_size);
+        let board = Bitmap2D::zeros(board_size);
+
+        let piece_count: [u32; 7] = [0, 4, 0, 0, 0, 0, 0];
+        let solution = fill_board(&board, piece_count, (0,0), &pieces);
+        assert!(solution.is_some());
+
+        let piece_count: [u32; 7] = [0, 2, 0, 0, 0, 0, 2];
+        let solution = fill_board(&board, piece_count, (0,0), &pieces);
+        assert!(solution.is_some());
+
+        let piece_count: [u32; 7] = [0, 3, 0, 0, 0, 0, 1];
+        let solution = fill_board(&board, piece_count, (0,0), &pieces);
+        assert!(solution.is_none());
+
+        let board = Bitmap2D::zeros((18,4));
+        let pieces = get_padded_pieces(board.shape);
+        let piece_count: [u32; 7] = [0, 18, 0, 0, 0, 0, 0];
+        assert!(fill_board(&board, piece_count, (0,0), &pieces).is_some());
+        
+        let board = Bitmap2D::zeros((17,4));
+        let pieces = get_padded_pieces(board.shape);
+        let piece_count: [u32; 7] = [0, 0, 0, 0, 0, 0, 17];
+        assert!(fill_board(&board, piece_count, (0,0), &pieces).is_none());
+    }
+
+    #[test]
+    fn num_solutions() {
+        let board = Bitmap2D::zeros((4,4));
+        let pieces = get_padded_pieces(board.shape);
+
+        let piece_count: [u32; 7] = [0, 0, 0, 0, 0, 0, 4];
+        let solutions = all_solutions(&board, piece_count, (0,0), &pieces);
+        assert_eq!(solutions.len(), 1);
+
+        let piece_count: [u32; 7] = [0, 4, 0, 0, 0, 0, 0];
+        let solutions = all_solutions(&board, piece_count, (0,0), &pieces);
+        assert_eq!(solutions.len(), 2);
+
+        let piece_count: [u32; 7] = [0, 2, 0, 0, 0, 0, 2];
+        let solutions = all_solutions(&board, piece_count, (0,0), &pieces);
+        assert_eq!(solutions.len(), 6);
     }
 }

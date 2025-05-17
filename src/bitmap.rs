@@ -95,6 +95,11 @@ pub struct Bitmap2D {
 }
 
 impl Bitmap2D {
+    pub fn zeros(shape: (usize, usize)) -> Self {
+        let datasize = (shape.0*shape.1 + 63) / 64;
+        Self { shape, data: vec![0; datasize] }
+    }
+
     pub fn get_lines(&self) -> Vec<Bitmap1D> {
         let mut out = Vec::with_capacity(self.shape.0);
         let line = Bitmap1D { len: self.shape.0*self.shape.1,
@@ -278,6 +283,35 @@ mod tests {
         assert!(padded.intersects(&padded01));
         assert!(padded11.intersects(&padded01));
 
+        let ones = Bitmap2D { shape: (32, 4), data: vec![1, 1] };
+        let zeros = Bitmap2D { shape: (32, 4), data: vec![0, 0] };
+        let ones0 = Bitmap2D { shape: (32, 4), data: vec![1, 0] };
+        let zeros1 = Bitmap2D { shape: (32, 4), data: vec![0, 1] };
+        assert!(ones.intersects(&ones));
+        assert!(ones.intersects(&ones0));
+        assert!(ones.intersects(&zeros1));
+        assert!(!zeros.intersects(&ones));
+        assert!(!zeros.intersects(&ones0));
+        assert!(!zeros1.intersects(&ones0));
+    }
+
+    #[test]
+    fn test_or() {
+        let ones = Bitmap2D { shape: (32, 4), data: vec![1, 1] };
+        let zeros = Bitmap2D { shape: (32, 4), data: vec![0, 0] };
+        let ones0 = Bitmap2D { shape: (32, 4), data: vec![1, 0] };
+        let zeros1 = Bitmap2D { shape: (32, 4), data: vec![0, 1] };
+        assert!(ones0.or(&zeros1).data.iter()
+                     .zip(ones.data.iter())
+                     .all(|(x, y)| x == y));
+
+        assert!(zeros.or(&ones0).data.iter()
+                     .zip(ones0.data.iter())
+                     .all(|(x, y)| x == y));
+
+        assert!(!zeros.or(&ones0).data.iter()
+                     .zip(ones.data.iter())
+                     .all(|(x, y)| x == y));
     }
 
     #[test]
